@@ -57,8 +57,8 @@ function Radar8({scores,color}) {
 }
 
 export default function App() {
-  const [apiKey, setApiKey]   = useState(() => localStorage.getItem("anthropic_key")||"");
-  const [showKey, setShowKey] = useState(!localStorage.getItem("anthropic_key"));
+  // API key comes from Vercel environment variable — users never see or enter it
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY || "";
   const [input, setInput]     = useState("");
   const [tickers, setTickers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -67,10 +67,6 @@ export default function App() {
   const [si, setSi]           = useState(0);
   const [tab, setTab]         = useState("overview");
 
-  function saveKey() {
-    localStorage.setItem("anthropic_key", apiKey);
-    setShowKey(false);
-  }
   function addTicker() {
     const t = input.trim().toUpperCase().replace(/[^A-Z.]/g,"");
     if (t && !tickers.includes(t) && tickers.length < 5) { setTickers(p=>[...p,t]); setInput(""); }
@@ -96,6 +92,7 @@ export default function App() {
         })
       });
       const raw = await res.json();
+      if (!apiKey) throw new Error("API key not configured — add VITE_OPENAI_API_KEY in Vercel environment variables");
       if (raw.error) throw new Error(raw.error?.message||JSON.stringify(raw.error));
       const text = (raw.choices?.[0]?.message?.content||"").trim();
       if (!text) throw new Error("Empty response");
@@ -119,28 +116,11 @@ export default function App() {
           Stock Research Terminal
         </h1>
         <p style={{color:C.dim,fontSize:11,margin:"0 0 8px"}}>AI institutional analysis · up to 5 tickers · options signals</p>
-        <button onClick={()=>setShowKey(v=>!v)} style={{background:C.muted,border:"1px solid "+C.border,color:C.dim,borderRadius:6,padding:"4px 10px",fontSize:11,cursor:"pointer"}}>
-          {apiKey?"✓ API Key saved — click to change":"⚠ Set API Key"}
-        </button>
+
       </div>
 
       <div style={{padding:"14px 16px 0"}}>
-        {showKey && (
-          <Card style={{marginBottom:14}} glow={C.gold}>
-            <Hd title="Enter Your Anthropic API Key" color={C.gold}/>
-            <p style={{color:C.dim,fontSize:12,marginBottom:10}}>
-              Get yours at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" style={{color:C.blue}}>platform.openai.com/api-keys</a> — costs ~$0.001 per analysis with gpt-4o-mini. Stored locally in your browser only.
-            </p>
-            <div style={{display:"flex",gap:8}}>
-              <input value={apiKey} onChange={e=>setApiKey(e.target.value)} type="password" placeholder="sk-..."
-                style={{flex:1,background:C.surface,border:"1px solid "+C.border,borderRadius:8,color:C.text,padding:"9px 12px",fontSize:13,outline:"none",fontFamily:"monospace"}}/>
-              <button onClick={saveKey} disabled={!apiKey.startsWith("sk-")}
-                style={{background:C.green,border:"none",color:"#000",borderRadius:8,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                Save
-              </button>
-            </div>
-          </Card>
-        )}
+
 
         <Card style={{marginBottom:14}}>
           <Hd title="Enter Tickers (up to 5)"/>
@@ -158,12 +138,12 @@ export default function App() {
               placeholder={tickers.length>=5?"Max 5":"AAPL, NVDA, TSLA…"} disabled={tickers.length>=5}
               style={{flex:1,background:C.surface,border:"1px solid "+C.border,borderRadius:8,color:C.text,padding:"9px 12px",fontSize:14,outline:"none",fontFamily:"inherit"}}/>
             <button onClick={addTicker} style={{background:C.muted,border:"1px solid "+C.border,color:C.text,borderRadius:8,padding:"9px 14px",fontSize:12,fontWeight:600,cursor:"pointer"}}>Add</button>
-            <button onClick={run} disabled={!tickers.length||loading||!apiKey}
-              style={{background:tickers.length&&!loading&&apiKey?"linear-gradient(135deg,#38bdf8,#a78bfa)":"#1e293b",border:"none",color:tickers.length&&!loading&&apiKey?"#000":C.dim,borderRadius:8,padding:"9px 18px",fontSize:13,fontWeight:700,cursor:tickers.length&&!loading&&apiKey?"pointer":"not-allowed"}}>
+            <button onClick={run} disabled={!tickers.length||loading}
+              style={{background:tickers.length&&!loading?"linear-gradient(135deg,#38bdf8,#a78bfa)":"#1e293b",border:"none",color:tickers.length&&!loading?"#000":C.dim,borderRadius:8,padding:"9px 18px",fontSize:13,fontWeight:700,cursor:tickers.length&&!loading?"pointer":"not-allowed"}}>
               {loading?"Analyzing…":"Run Analysis"}
             </button>
           </div>
-          {!apiKey && <p style={{color:C.red,fontSize:11,marginTop:8}}>⚠ Save your API key above first</p>}
+
         </Card>
 
         {loading && (
