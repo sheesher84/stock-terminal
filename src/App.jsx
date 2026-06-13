@@ -13,7 +13,7 @@ const PROMPT = `You are a senior institutional equity analyst. OUTPUT ONLY RAW J
 Return this exact structure:
 {"stocks":[{"ticker":"","companyName":"","sector":"","currentPrice":0,"marketCap":"","analystTarget":0,"analystUpside":0,"analystRating":"","revenue":"","revenueGrowth":0,"netIncome":"","cashPosition":"","debtLevel":"","burnRate":"","pe":0,"ps":0,"grossMargin":0,"operatingMargin":0,"freeCashFlow":"","beta":0,"shortFloat":0,"institutionalOwnership":0,"insiderSentiment":"Mixed","recentInsiderActivity":[{"name":"","role":"","type":"SELL","shares":0,"value":"","date":""}],"institutionalMoves":[{"fund":"","action":"ADDED","change":"","period":""}],"keyPartnerships":["","",""],"recentCatalysts":["","",""],"riskFactors":["","",""],"moat":"","radarScores":{"fundamentals":0,"momentum":0,"partnerships":0,"insiderSignal":0,"cashStrength":0,"analystConviction":0,"optionsFlow":0,"riskReward":0},"overallScore":0,"verdict":"","verdictColor":"gold","thesisLong":"","thesisShort":"","optionsBias":"","optionsPlay":"","optionsStrategy":"","optionsDTE":90,"optionsStrike":"","optionsPriceTarget":0,"optionsStopLoss":0,"optionsIV":"","optionsIVPct":0,"optionsRR":"","optionsAlt":""}],"comparison":{"winner":"","winnerReason":"","sectorNote":""}}
 
-Rules: verdictColor=green|gold|red|blue. insiderSentiment=Bullish|Bearish|Mixed|Neutral. type=BUY|SELL. action=ADDED|REDUCED|INITIATED|EXITED. radarScores=integers 0-100. Strings under 200 chars. ONLY JSON.`;
+Rules: verdictColor=green|gold|red|blue. insiderSentiment=Bullish|Bearish|Mixed|Neutral. type=BUY|SELL. action=ADDED|REDUCED|INITIATED|EXITED. radarScores=integers 0-100. Strings under 200 chars. ALL numeric fields must be a number or null — NEVER a string like "N/A" or "-". ONLY JSON.`;
 
 const vc = (c) => ({green:C.green,gold:C.gold,red:C.red,blue:C.blue}[c]||C.blue);
 
@@ -98,7 +98,16 @@ export default function App() {
       if (!text) throw new Error("Empty response");
       const a=text.indexOf("{"), b=text.lastIndexOf("}");
       if (a===-1||b===-1) throw new Error("No JSON found. Response: "+text.slice(0,100));
-      const parsed = JSON.parse(text.slice(a,b+1));
+      // Sanitize: replace any non-numeric values in number fields with null
+      const cleaned = text.slice(a,b+1)
+        .replace(/:\s*"N\/A"/g, ': null')
+        .replace(/:\s*"n\/a"/g, ': null')
+        .replace(/:\s*"—"/g, ': null')
+        .replace(/:\s*"-"/g, ': null')
+        .replace(/:\s*"~([0-9.]+)"/g, ': $1')
+        .replace(/:\s*"([0-9.]+)%"/g, ': $1')
+        .replace(/:\s*"([0-9.]+)x"/g, ': $1');
+      const parsed = JSON.parse(cleaned);
       if (!Array.isArray(parsed.stocks)||!parsed.stocks.length) throw new Error("Bad data: "+Object.keys(parsed).join(","));
       setData(parsed);
     } catch(e) { setError(e.message); }
