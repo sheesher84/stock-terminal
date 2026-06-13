@@ -587,7 +587,7 @@ export default function App() {
                   </Card>
                 )}
                 <Card>
-                  <Hd title="Ranked 1 to "+stocks.length+" — Best to Worst Investment"/>
+                  <Hd title={`Ranked 1 to ${stocks.length} — Best to Worst Investment`} />
                   {ranked.map((st,i)=>{
                     const idx=stocks.indexOf(st);
                     return (
